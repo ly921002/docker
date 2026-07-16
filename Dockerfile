@@ -8,6 +8,10 @@ RUN apt update && apt install -y \
     build-essential \
     gcc \
     g++ \
+    gcc-arm-linux-gnueabihf \
+    libc6-dev-armhf-cross \
+    libc6-dev \
+    binutils \
     pkg-config \
     python3 \
     file \
