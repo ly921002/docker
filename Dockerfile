@@ -20,6 +20,9 @@ RUN apt update && apt install -y \
     wget \
     curl \
     ca-certificates \
+    iproute2 \
+    net-tools \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 
