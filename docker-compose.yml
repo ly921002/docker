@@ -1,28 +1,29 @@
-# docker-compose.yml —— docker-empty:box64（让这个容器本身能跑 x86_64）
+# docker-compose.yml —— docker-empty:box64（免特权：显式 box64 跑 x86_64）
 # ----------------------------------------------------------------------------
 # 镜像：ghcr.io/ly921002/docker-empty:box64（ubuntu:22.04 arm64 + box64/box32）。
-# 目标：跑一个【常驻】的 box64 容器，容器内部通过 box64 透明运行 x86_64 程序。
-#   - 注册是在【本容器内】做的，解释器用本容器自己的 box64，
-#     服务本容器内的 x86_64 执行（不是宿主机一次性全局注册）。
-#   - 需要 privileged（写 binfmt_misc 要 SYS_ADMIN）；restart 后会重新注册。
+# 方式：免特权、不注册 binfmt；x86_64 程序用【显式】box64 调用运行：
+#           box64 <x86_64程序> [参数...]
+#       box64 已装在镜像 PATH 中，纯用户态翻译，无需 privileged、无需动内核 binfmt。
 #
 # 用法：
 #   docker login ghcr.io                 # 镜像私有；同源 GitHub 账号可拉
 #   docker compose up -d                 # 构建(如需)并常驻运行
-#   docker compose logs -f box64         # 看 box64 注册结果
-#   docker exec -it box64 bash           # 进容器，直接跑 x86_64 程序（如 ./steamcmd）
+#   docker exec -it box64 bash           # 进容器
+#   # 容器内显式跑 x86_64 程序：
+#   box64 ./steamcmd                     # 例：经 box64 运行 x86_64 steamcmd
+#   # 也可不进交互 shell，直接：
+#   docker exec box64 box64 /root/steamcmd/steamcmd +quit
 #   docker compose down                  # 停止
 #
 # 说明：
 #   - 仅 arm64 宿主有效；x86_64 宿主原生跑 x86_64，无需 box64。
-#   - 运行【动态链接】的 x86_64 程序（如 SteamCMD）还需 x86_64 运行库；本镜像未内置，
-#     需在容器内加 amd64 多架构库：dpkg --add-architecture amd64 && apt install
-#     libc6:amd64 libstdc++6:amd64 libgcc-s1:amd64 zlib1g:amd64（可参考 ly921002/box64-arm64-deb）。
+#   - 【动态链接】的 x86_64 程序（如 SteamCMD）还需 x86_64 运行库；本镜像未内置，需在容器内：
+#       dpkg --add-architecture amd64 && apt-get update && apt-get install -y \
+#         libc6:amd64 libstdc++6:amd64 libgcc-s1:amd64 zlib1g:amd64
+#     （可参考 ly921002/box64-arm64-deb；或让我把这些库固化进 Dockerfile）。
 #     静态链接的 x86_64 程序开箱即用。
-#   - 不想用特权 / 完全不动 binfmt：删掉 privileged 与 command 里的注册，改为显式调用
-#     box64 <x86_64程序>（box64 已装好，无需任何注册）。
-#   - 清理注册（down 之后规则仍留在内核但已失效，可手动清）：
-#       echo -1 | sudo tee /proc/sys/fs/binfmt_misc/box64
+#   - 想要「直接 ./程序」透明运行（不用每次加 box64 前缀）？那需要容器内注册 binfmt +
+#     privileged，属于另一种方式，可参考 ly921002/gsm-box64 的 start-x64.sh。
 # ----------------------------------------------------------------------------
 
 services:
@@ -34,14 +35,8 @@ services:
         - linux/arm64
     image: ghcr.io/ly921002/docker-empty:box64
     container_name: box64
-    privileged: true            # 容器内注册 binfmt_misc 需要 SYS_ADMIN
     restart: unless-stopped
-    stdin_open: true            # 便于 docker attach / 交互
+    stdin_open: true            # 便于 docker exec -it / attach
     tty: true
-    volumes:
-      - ./register-box64.sh:/usr/local/bin/register-box64.sh:ro
-    # 启动时先在【本容器内】注册 box64，再保持运行
-    command:
-      - /bin/bash
-      - -c
-      - /usr/local/bin/register-box64.sh; exec sleep infinity
+    # 常驻即可；x86_64 程序通过 docker exec ... box64 <程序> 显式运行
+    command: ["sleep", "infinity"]
