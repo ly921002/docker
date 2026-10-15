@@ -31,12 +31,7 @@ docker exec box64 box64 /root/steamcmd/steamcmd +quit
 ## 要点
 
 - **仅 arm64 宿主**有效；x86_64 宿主原生跑 x86_64，无需 box64。
-- **动态链接**的 x86_64 程序（如 SteamCMD）还需 **x86_64 运行库**，本镜像未内置，需在容器内：
-  ```bash
-  dpkg --add-architecture amd64 && apt-get update && apt-get install -y \
-    libc6:amd64 libstdc++6:amd64 libgcc-s1:amd64 zlib1g:amd64
-  ```
-  （可参考 [ly921002/box64-arm64-deb](https://github.com/ly921002/box64-arm64-deb)，或让我把这些库固化进 `Dockerfile`。静态链接的 x86_64 程序开箱即用。）
+- **动态链接**的 x86_64 程序（如 SteamCMD）所需的 **x86_64 运行库**（`libc6` / `libstdc++6` / `libgcc-s1` / `libcurl4` / `libssl3` / `zlib1g` 的 amd64 版）已**固化进镜像**（amd64 多架构），拉起来即可直接跑动态 x86_64 程序；静态链接的开箱即用。
 - **想要「直接 `./程序`」透明运行**（不用每次加 `box64` 前缀）？那需要容器内注册 binfmt + `privileged`，属于另一种方式，可参考 [ly921002/gsm-box64](https://github.com/ly921002/gsm-box64) 的 `start-x64.sh`。
 
 ## 文件

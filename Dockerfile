@@ -2,7 +2,10 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt update && apt install -y \
+# x86_64 运行库（amd64 多架构）：让 box64 能运行【动态链接】的 x86_64 程序（如 SteamCMD）。
+# 先加 amd64 架构，apt update 会同时拉取 amd64 索引，再装 :amd64 运行库（仅解包文件，不在 arm64 上执行）。
+RUN dpkg --add-architecture amd64 \
+    && apt update && apt install -y \
     git \
     cmake \
     build-essential \
@@ -23,6 +26,12 @@ RUN apt update && apt install -y \
     iproute2 \
     net-tools \
     procps \
+    libc6:amd64 \
+    libstdc++6:amd64 \
+    libgcc-s1:amd64 \
+    libcurl4:amd64 \
+    libssl3:amd64 \
+    zlib1g:amd64 \
     && rm -rf /var/lib/apt/lists/*
 
 
